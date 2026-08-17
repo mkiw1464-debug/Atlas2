@@ -669,13 +669,10 @@ static void AtlasMod_Load() {
     MSHookFunction((void*)loopAddr,
         (void*)hook_gameLoop,(void**)&orig_gameLoop);
 
-   // //AFTER
-IMP orig;
-MSHookMessageEx(UIApplication.class,
-    @selector(someMethod),
-    (IMP)replacementFunc,
-    &orig);  // <-- IMP* — betul
-
+    // Hook sendEvent untuk triple-tap detection
+    MSHookMessageEx([UIApplication class],
+        @selector(sendEvent:),
+        (IMP)hook_sendEvent,(IMP*)&orig_sendEvent);
 
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW,
         (int64_t)(2.0*NSEC_PER_SEC)),
