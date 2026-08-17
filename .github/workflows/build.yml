@@ -1,0 +1,52 @@
+name: Build AtlasMod Dylib
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      # ── 1. Checkout repo ──
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # ── 2. Install Theos ──
+      - name: Install Theos
+        run: |
+          brew install ldid xz
+          git clone --recursive https://github.com/theos/theos.git ~/theos
+          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
+          echo "$HOME/theos/bin" >> $GITHUB_PATH
+
+      # ── 3. Download iOS SDK ──
+      - name: Download iOS SDK
+        run: |
+          curl -LO https://github.com/theos/sdks/releases/download/v1/iPhoneOS16.5.sdk.tar.xz
+          tar -xf iPhoneOS16.5.sdk.tar.xz -C ~/theos/sdks/
+
+      # ── 4. Build ──
+      - name: Build Dylib
+        run: |
+          make package FINALPACKAGE=1
+
+      # ── 5. Extract .dylib ──
+      - name: Extract Dylib
+        run: |
+          mkdir -p output
+          cp .theos/obj/release/AtlasMod.dylib output/AtlasMod.dylib || \
+          cp .theos/obj/debug/AtlasMod.dylib output/AtlasMod.dylib
+          
+          # Verify
+          file output/AtlasMod.dylib
+
+      # ── 6. Upload Artifact ──
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AtlasMod-OB54
+          path: output/AtlasMod.dylib
+          retention-days: 30
