@@ -1,0 +1,64 @@
+name: Build AtlasMod Dylib
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Fix Homebrew Tap Trust
+        run: |
+          export HOMEBREW_NO_REQUIRE_TAP_TRUST=1
+          echo "HOMEBREW_NO_REQUIRE_TAP_TRUST=1" >> $GITHUB_ENV
+          brew untap aws/tap || true
+
+      - name: Install Dependencies
+        env:
+          HOMEBREW_NO_REQUIRE_TAP_TRUST: 1
+        run: |
+          brew install ldid xz || true
+
+      - name: Install Theos
+        run: |
+          git clone --recursive https://github.com/theos/theos.git $HOME/theos
+          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
+          echo "$HOME/theos/bin" >> $GITHUB_PATH
+
+      - name: Download iOS SDK
+        run: |
+          curl -L -o sdk.tar.xz \
+            https://github.com/theos/sdks/releases/download/v1/iPhoneOS16.5.sdk.tar.xz
+          tar -xf sdk.tar.xz -C $HOME/theos/sdks/
+
+      - name: Setup Substrate Headers
+        run: |
+          mkdir -p $HOME/theos/include
+          curl -L -o $HOME/theos/include/substrate.h \
+            https://raw.githubusercontent.com/theos/headers/master/CydiaSubstrate.h
+
+      - name: Build Dylib
+        run: |
+          export THEOS=$HOME/theos
+          export PATH=$HOME/theos/bin:$PATH
+          make package FINALPACKAGE=1 2>&1
+
+      - name: Collect Output
+        run: |
+          mkdir -p output
+          find . -name "*.dylib" | head -1 | xargs -I{} cp {} output/AtlasMod.dylib || true
+          find . -name "*.deb"   | head -1 | xargs -I{} cp {} output/ || true
+          ls -la output/
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: AtlasMod-OB54
+          path: output/
+          retention-days: 30
