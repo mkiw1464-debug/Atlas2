@@ -1,0 +1,8 @@
+Package: com.fraughting.atlasmod
+Name: AtlasMod
+Version: 1.0.0
+Architecture: iphoneos-arm64
+Description: Atlas FF Mod OB54
+Author: fraughting
+Maintainer: fraughting
+Section: Tweaks
