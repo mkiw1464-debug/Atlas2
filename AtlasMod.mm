@@ -1,4 +1,5 @@
 #import <Foundation/Foundation.h>
+#include <libkern/OSCacheControl.h>
 #import <UIKit/UIKit.h>
 #import <CoreGraphics/CoreGraphics.h>
 #import <ReplayKit/ReplayKit.h>
@@ -668,10 +669,13 @@ static void AtlasMod_Load() {
     MSHookFunction((void*)loopAddr,
         (void*)hook_gameLoop,(void**)&orig_gameLoop);
 
-    // UIApplication hook
-    MSHookMessageEx(UIApplication.class,
-        @selector(sendEvent:),
-        (IMP)hook_sendEvent,(void**)&orig_sendEvent);
+   // //AFTER
+IMP orig;
+MSHookMessageEx(UIApplication.class,
+    @selector(someMethod),
+    (IMP)replacementFunc,
+    &orig);  // <-- IMP* — betul
+
 
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW,
         (int64_t)(2.0*NSEC_PER_SEC)),
