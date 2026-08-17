@@ -1,4 +1,4 @@
-name: Build AtlasMod Dylib
+name: Build AtlasMod
 
 on:
   push:
@@ -17,46 +17,39 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Fix Homebrew
-        run: |
-          brew untap aws/tap || true
+      - name: Untap broken taps
+        run: brew untap aws/tap || true
 
-      - name: Install Dependencies
-        run: |
-          brew install ldid xz || true
+      - name: Install ldid
+        run: brew install ldid || true
 
-      - name: Install Theos
+      - name: Clone Theos
         run: |
-          git clone --recursive https://github.com/theos/theos.git $THEOS
+          git clone --recursive \
+            https://github.com/theos/theos.git $THEOS
 
-      - name: Download iOS SDK
+      - name: Get iOS SDKs
         run: |
-          # Guna theos-jailed SDK yang confirm ada
-          git clone https://github.com/theos/sdks.git /tmp/theos-sdks
-          cp -r /tmp/theos-sdks/*.sdk $THEOS/sdks/ || true
-          ls $THEOS/sdks/
+          git clone --depth 1 \
+            https://github.com/theos/sdks.git /tmp/sdks
+          mv /tmp/sdks/iPhoneOS*.sdk $THEOS/sdks/
 
-      - name: Setup Substrate Headers
+      - name: Substrate Header
         run: |
-          mkdir -p $THEOS/include
-          curl -L -o $THEOS/include/substrate.h \
-            https://raw.githubusercontent.com/theos/headers/master/CydiaSubstrate.h
+          curl -fsSL \
+            https://raw.githubusercontent.com/theos/headers/master/CydiaSubstrate.h \
+            -o $THEOS/include/substrate.h
 
       - name: Build
         run: |
           export PATH=$THEOS/bin:$PATH
-          make package FINALPACKAGE=1 2>&1
+          make package FINALPACKAGE=1
 
-      - name: Collect Output
-        run: |
-          mkdir -p output
-          find . -name "*.dylib" | head -1 | xargs -I{} cp {} output/AtlasMod.dylib || true
-          find . -name "*.deb" | head -1 | xargs -I{} cp {} output/ || true
-          ls -la output/
-
-      - name: Upload Artifact
+      - name: Upload
         uses: actions/upload-artifact@v4
         with:
           name: AtlasMod-OB54
-          path: output/
+          path: |
+            packages/*.deb
+            .theos/obj/**/*.dylib
           retention-days: 30
